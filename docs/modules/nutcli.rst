@@ -1,0 +1,4 @@
+nutcli
+=======
+
+.. automodule:: nutcli

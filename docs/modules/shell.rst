@@ -1,0 +1,4 @@
+Shell
+=====
+
+.. automodule:: nutcli.shell

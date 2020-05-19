@@ -1,0 +1,9 @@
+.vscode
+__pycache__
+.pytest_cache
+*.py[cod]
+_build
+build/
+dist/
+nutcli.egg-info/
+
