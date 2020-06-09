@@ -1,4 +1,7 @@
 import colorama
+import datetime
+import functools
+import sys
 
 import nutcli
 from nutcli.decorators import IgnoreErrors, Timeout
@@ -192,6 +195,10 @@ class TaskList(Task):
     It can execute a list of task in series and provide nicely formatted
     log output.
 
+    This class has wrappers around ``TaskList.tasks`` list methods therefore
+    you can use TaskList instance as a list itself to easily add or remove
+    single tasks.
+
     .. code-block:: python
         :caption: Example usage: Basic use case
 
@@ -276,8 +283,10 @@ class TaskList(Task):
         name=None,
         ignore_errors=False,
         always=False,
+        enabled=True,
         timeout=None,
-        logger=None
+        logger=None,
+        duration=False
     ):
         """
         :param tag: Tag that will be visible on each log message,
@@ -291,11 +300,17 @@ class TaskList(Task):
         :param always: If True, it will be run inside a :class:`TaskList` even
             if some previous tasks raised an exception, defaults to False
         :type always: bool, optional
+        :param enabled: If False, this task will not execute its handler,
+            defaults to True
+        :type enabled: bool, optional
         :param timeout: Timeout in seconds or specific format (see
             :class:`nutcli.decorators.Timeout`), defaults to None
         :type timeout: int or str, optional
         :param logger: Logger, defaults to (= :class:`nutcli.message`)
         :type logger: logger, optional
+        :param duration: If True, the time that the task list takes to finish
+            is printed at the end, defaults to False
+        :type duration: bool, optional
         """
         super().__init__(
             name, ignore_errors, always, False, True, timeout, logger
@@ -303,6 +318,7 @@ class TaskList(Task):
         super().__call__(self._run_tasks)
 
         self.tag = tag
+        self.duration = duration
         self.tasks = []
 
     def _log_message(self, fn, msg, args, kwargs):
@@ -313,8 +329,12 @@ class TaskList(Task):
 
     def _run_tasks(self):
         error = None
-        for idx, task in enumerate(self.tasks, start=1):
-            msg = f'[{idx}/{len(self.tasks)}] {task.name}'
+        error_info = None
+
+        enabled_tasks = [x for x in self.tasks if x.enabled]
+        start = datetime.datetime.now()
+        for idx, task in enumerate(enabled_tasks, start=1):
+            msg = f'[{idx}/{len(enabled_tasks)}] {task.name}'
 
             if error is not None and not task.always:
                 self.info(f'{msg} (skipped on error)')
@@ -331,9 +351,20 @@ class TaskList(Task):
                 msg = Colorize.all(f'ERROR {e.__class__.__name__}', colorama.Fore.RED)
                 self.error(f'{msg}: {str(e)}')
                 error = e
+                error_info = sys.exc_info()
+
+        if self.duration:
+            end = datetime.datetime.now()
+            hours, remainder = divmod((end - start).total_seconds(), 3600)
+            minutes, seconds = divmod(remainder, 60)
+            self.info('Finished in {:02}:{:02}:{:02}'.format(
+                int(hours), int(minutes), int(seconds)
+            ))
 
         if error is not None:
-            raise error
+            msg = Colorize.all(error.__class__.__name__, colorama.Fore.RED)
+            self.error(f'Finished with error {msg}: {str(error)}')
+            raise error.with_traceback(error_info[2])
 
     def __call__(self, tasks):
         """
@@ -347,3 +378,51 @@ class TaskList(Task):
 
         self.tasks += tasks if type(tasks) == list else [tasks]
         return self
+
+    @functools.wraps(list.append)
+    def append(self, item):
+        return self.tasks.append(item)
+
+    @functools.wraps(list.extend)
+    def extend(self, item):
+        return self.tasks.extend(item)
+
+    @functools.wraps(list.insert)
+    def insert(self, index, item):
+        return self.tasks.insert(index, item)
+
+    @functools.wraps(list.remove)
+    def remove(self, item):
+        return self.tasks.remove(item)
+
+    @functools.wraps(list.pop)
+    def pop(self, index=-1):
+        return self.tasks.pop(index)
+
+    @functools.wraps(list.clear)
+    def clear(self):
+        return self.tasks.clear()
+
+    @functools.wraps(list.__len__)
+    def __len__(self):
+        return len(self.tasks)
+
+    @functools.wraps(list.__getitem__)
+    def __getitem__(self, key):
+        return self.tasks[key]
+
+    @functools.wraps(list.__setitem__)
+    def __setitem__(self, key, value):
+        self.tasks[key] = value
+
+    @functools.wraps(list.__delitem__)
+    def __delitem__(self, key):
+        del self.tasks[key]
+
+    @functools.wraps(list.__iter__)
+    def __iter__(self):
+        return self.tasks.__iter__()
+
+    @functools.wraps(list.__contains__)
+    def __contains__(self, item):
+        return item in self.tasks

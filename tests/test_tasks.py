@@ -1,4 +1,5 @@
 import logging
+import mock
 import time
 
 import pytest
@@ -281,3 +282,113 @@ def test_TaskList__nested_name(caplog):
     assert '[L1] [2/2] TaskList2' in caplog.text
     assert '[L1]   [L2] [1/1] Task 2' in caplog.text
     assert 'T2' in caplog.text
+
+
+def test_TaskList__disabled_tasks_basic(caplog):
+    def task_disabled(task):
+        assert False
+
+    tasklist = TaskList('L1')([
+        Task('Task 1', enabled=False)(task_disabled),
+    ])
+
+    with caplog.at_level(logging.DEBUG):
+        tasklist.execute()
+
+    assert not caplog.text
+
+def test_TaskList__disabled_tasks_complex(caplog):
+    def task_disabled(task):
+        assert False
+
+    tasklist = TaskList('L1')([
+        Task('Task 1', enabled=False)(task_disabled),
+        Task('Task 2', enabled=True)(lambda task: task.info('T2')),
+    ])
+
+    with caplog.at_level(logging.DEBUG):
+        tasklist.execute()
+
+    assert '[L1] [1/1] Task 2' in caplog.text
+
+
+def test_TaskList__list_methods(caplog):
+    tasklist = TaskList()
+    t1 = Task()
+    t2 = Task()
+    t3 = Task()
+
+    assert not tasklist.tasks
+    assert len(tasklist) == 0
+    assert t1 not in tasklist
+    assert t2 not in tasklist
+    assert t3 not in tasklist
+
+    tasklist.append(t1)
+    assert tasklist.tasks == [t1]
+    assert len(tasklist) == 1
+    assert tasklist[0] == t1
+    assert t1 in tasklist
+    assert t2 not in tasklist
+    assert t3 not in tasklist
+
+    tasklist.extend([t2])
+    assert tasklist.tasks == [t1, t2]
+    assert len(tasklist) == 2
+    assert tasklist[0] == t1
+    assert tasklist[1] == t2
+    assert t1 in tasklist
+    assert t2 in tasklist
+    assert t3 not in tasklist
+
+    tasklist.insert(1, t3)
+    assert tasklist.tasks == [t1, t3, t2]
+    assert len(tasklist) == 3
+    assert tasklist[0] == t1
+    assert tasklist[1] == t3
+    assert tasklist[2] == t2
+    assert t1 in tasklist
+    assert t2 in tasklist
+    assert t3 in tasklist
+
+    tasklist.remove(t3)
+    assert tasklist.tasks == [t1, t2]
+    assert len(tasklist) == 2
+    assert tasklist[0] == t1
+    assert tasklist[1] == t2
+    assert t1 in tasklist
+    assert t2 in tasklist
+    assert t3 not in tasklist
+
+    tasklist.pop()
+    assert tasklist.tasks == [t1]
+    assert len(tasklist) == 1
+    assert tasklist[0] == t1
+    assert t1 in tasklist
+    assert t2 not in tasklist
+    assert t3 not in tasklist
+
+    tasklist.clear()
+    assert not tasklist.tasks
+    assert len(tasklist) == 0
+    assert t1 not in tasklist
+    assert t2 not in tasklist
+    assert t3 not in tasklist
+
+    tasklist.tasks = [None]
+    tasklist[0] = t1
+    assert tasklist.tasks == [t1]
+
+    del tasklist[0]
+    assert not tasklist.tasks
+
+    tasklist.tasks = [t1, t2, t3]
+    count = 0
+    for index, task in enumerate(tasklist):
+        count += 1
+        assert tasklist.tasks[index] == task
+    assert count == 3
+
+    popped = tasklist.pop(1)
+    assert tasklist.tasks == [t1, t3]
+    assert popped == t2
