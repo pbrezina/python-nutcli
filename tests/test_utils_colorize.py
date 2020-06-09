@@ -1,3 +1,4 @@
+import mock
 import re
 
 import colorama
@@ -5,9 +6,12 @@ import colorama
 from nutcli.utils import Colorize
 
 
-def test_Colorize_all__enabled():
-    Colorize.enabled(True)
-
+@mock.patch(
+    'nutcli.utils.Colorize.print_colors',
+    new_callable=mock.PropertyMock,
+    return_value=True
+)
+def test_Colorize_all__enabled(_):
     result = Colorize.all('hello', colorama.Style.BRIGHT)
     assert result == f'{colorama.Style.RESET_ALL}{colorama.Style.BRIGHT}hello{colorama.Style.RESET_ALL}'
 
@@ -18,9 +22,12 @@ def test_Colorize_all__enabled():
     assert result == ''
 
 
-def test_Colorize_all__disabled():
-    Colorize.enabled(False)
-
+@mock.patch(
+    'nutcli.utils.Colorize.print_colors',
+    new_callable=mock.PropertyMock,
+    return_value=False
+)
+def test_Colorize_all__disabled(_):
     result = Colorize.all('hello', colorama.Style.BRIGHT)
     assert result == 'hello'
 
@@ -28,23 +35,32 @@ def test_Colorize_all__disabled():
     assert result == 'hello'
 
 
-def test_Colorize_bold__enabled():
-    Colorize.enabled(True)
-
+@mock.patch(
+    'nutcli.utils.Colorize.print_colors',
+    new_callable=mock.PropertyMock,
+    return_value=True
+)
+def test_Colorize_bold__enabled(_):
     result = Colorize.bold('hello')
     assert result == f'{colorama.Style.RESET_ALL}{colorama.Style.BRIGHT}hello{colorama.Style.RESET_ALL}'
 
 
-def test_Colorize_bold__disabled():
-    Colorize.enabled(False)
-
+@mock.patch(
+    'nutcli.utils.Colorize.print_colors',
+    new_callable=mock.PropertyMock,
+    return_value=False
+)
+def test_Colorize_bold__disabled(_):
     result = Colorize.bold('hello')
     assert result == 'hello'
 
 
-def test_Colorize_re__enabled():
-    Colorize.enabled(True)
-
+@mock.patch(
+    'nutcli.utils.Colorize.print_colors',
+    new_callable=mock.PropertyMock,
+    return_value=True
+)
+def test_Colorize_re__enabled(_):
     result = Colorize.re('hello', r'(.+)', colorama.Style.BRIGHT)
     assert result == f'{colorama.Style.RESET_ALL}{colorama.Style.BRIGHT}hello{colorama.Style.RESET_ALL}'
 
@@ -74,15 +90,21 @@ def test_Colorize_re__enabled():
     assert result == f'{colorama.Style.RESET_ALL}{colorama.Style.BRIGHT}h{colorama.Style.RESET_ALL}{colorama.Style.RESET_ALL}{colorama.Fore.RED}e{colorama.Style.RESET_ALL}{colorama.Style.RESET_ALL}{colorama.Fore.BLUE}{colorama.Style.BRIGHT}llo{colorama.Style.RESET_ALL}'
 
 
-def test_Colorize_re__enabled_compiled():
-    Colorize.enabled(True)
-
+@mock.patch(
+    'nutcli.utils.Colorize.print_colors',
+    new_callable=mock.PropertyMock,
+    return_value=True
+)
+def test_Colorize_re__enabled_compiled(_):
     result = Colorize.re('hello', re.compile(r'(.+)'), colorama.Style.BRIGHT)
     assert result == f'{colorama.Style.RESET_ALL}{colorama.Style.BRIGHT}hello{colorama.Style.RESET_ALL}'
 
 
-def test_Colorize_re__disabled():
-    Colorize.enabled(False)
-
+@mock.patch(
+    'nutcli.utils.Colorize.print_colors',
+    new_callable=mock.PropertyMock,
+    return_value=False
+)
+def test_Colorize_re__disabled(_):
     result = Colorize.re('hello', r'(.+)', colorama.Style.BRIGHT)
     assert result == 'hello'
