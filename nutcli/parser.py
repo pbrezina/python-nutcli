@@ -129,3 +129,43 @@ class UniqueAppendConstAction(UniqueAppendAction):
 
     def _get_values(self, values):
         return self.const
+
+
+class NegateAction(argparse.Action):
+    """
+    Implements toggle argumnets.
+
+    Stores True if --arg is present, False if --no-arg is present.
+
+    .. code-block:: python
+        :caption: Example usage
+
+        parser = argparse.ArgumentParser()
+
+        # You can set default value using 'default' parameter.
+        parser.add_argument(
+            '--arg', '--no-arg', action=NegateAction, help='Enable/disable arg.'
+        )
+
+        args = parser.parse_args([])
+        print(args.arg)
+        # -> None
+
+        args = parser.parse_args(['--arg'])
+        print(args.arg)
+        # -> True
+
+        args = parser.parse_args(['--no-arg'])
+        print(args.arg)
+        # -> False
+    """
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **{**kwargs, 'nargs': 0})
+
+    def __call__(self, parser, ns, values, option):
+        dest = self.dest
+        if dest is None:
+            dest = option[5:] if option[2:5] == 'no-' else option[2:]
+
+        setattr(ns, dest, option[2:4] != 'no')
