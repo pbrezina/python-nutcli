@@ -1,12 +1,10 @@
 import logging
-import re
 import time
 
-import colorama
 import mock
 import pytest
 
-from nutcli.decorators import *
+from nutcli.decorators import Identity, IgnoreErrors, LogExecution, SideEffect, Timeout
 from nutcli.exceptions import TimeoutError
 from nutcli.utils import LogExecutionPrinter
 

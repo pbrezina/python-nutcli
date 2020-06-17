@@ -4,7 +4,7 @@ import os
 import mock
 import pytest
 
-from nutcli.shell import *
+from nutcli.shell import Shell, ShellCommandError, ShellEnvironment, ShellResult, ShellTimeoutError
 
 
 def test_ShellEnvironment_defaults__system():

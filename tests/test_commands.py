@@ -1,10 +1,11 @@
+import argparse
 import logging
 from types import SimpleNamespace
 
 import pytest
 
 import nutcli
-from nutcli.commands import *
+from nutcli.commands import Actor, Command, CommandGroup, CommandParser, SubcommandsActor
 
 
 def test_Actor__filter_parser_args__empty():
@@ -205,7 +206,6 @@ def test_CommandParser__nested():
 def test_CommandGroup__basic():
     parser = argparse.ArgumentParser()
     actor1 = Actor()
-    actor2 = Actor()
 
     CommandParser('Test Commands')([
         CommandGroup('Test Group')([

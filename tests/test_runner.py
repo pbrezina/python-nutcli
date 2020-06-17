@@ -178,7 +178,7 @@ def test_Runner__logger_override(caplog):
             ['test']
         )
         runner = Runner('test', parser, logger=logging.getLogger('test'))
-        rc = runner.default_logger().execute(runner.parse_args(['test']))
+        runner.default_logger().execute(runner.parse_args(['test']))
 
     assert caplog.records[0].name == 'test'
     assert caplog.records[0].message == 'TEST'

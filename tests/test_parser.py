@@ -1,6 +1,6 @@
 import argparse
 
-from nutcli.parser import *
+from nutcli.parser import NegateAction, UniqueAppendAction, UniqueAppendConstAction
 
 
 def test_UniqueAppendAction():

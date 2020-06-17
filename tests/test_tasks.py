@@ -1,11 +1,10 @@
 import logging
-import mock
 import time
 
 import pytest
 
 from nutcli.exceptions import TimeoutError
-from nutcli.tasks import *
+from nutcli.tasks import Task, TaskList
 
 
 def test_Task__disabled(caplog):
@@ -29,20 +28,26 @@ def test_Task__taskarg(caplog):
     caplog.clear()
 
     t1 = Task('Test')
+
     def test_fn(task):
         assert task == t1
+
     t1(test_fn)
     t1.execute()
 
     t2 = Task('Test')
+
     def test_fn2(task):
         assert task == 'test'
+
     t2(test_fn2, 'test')
     t2.execute()
 
     t3 = Task('Test')
+
     def test_fn3(task):
         assert task == 'kwtest'
+
     t3(test_fn3, task='kwtest')
     t3.execute()
 
@@ -314,6 +319,7 @@ def test_TaskList__disabled_tasks_basic(caplog):
         tasklist.execute()
 
     assert not caplog.text
+
 
 def test_TaskList__disabled_tasks_complex(caplog):
     def task_disabled(task):

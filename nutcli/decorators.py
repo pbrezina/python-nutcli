@@ -46,7 +46,7 @@ def IgnoreErrors(function):
     def wrapper(*args, **kwargs):
         try:
             return function(*args, **kwargs)
-        except:
+        except Exception:
             return None
 
     return wrapper

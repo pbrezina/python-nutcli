@@ -1,8 +1,9 @@
-import colorama
 import datetime
 import functools
-import sys
 import inspect
+import sys
+
+import colorama
 
 import nutcli
 from nutcli.decorators import IgnoreErrors, Timeout
@@ -369,7 +370,7 @@ class TaskList(Task):
             self.info(msg)
             try:
                 task.execute(parent=self)
-            except Exception as e:
+            except BaseException as e:
                 msg = Colorize.all(f'ERROR {e.__class__.__name__}', colorama.Fore.RED)
                 self.error(f'{msg}: {str(e)}')
                 error = e

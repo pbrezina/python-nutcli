@@ -1,9 +1,6 @@
 import logging
-import re
 
-import colorama
-
-from nutcli.utils import *
+from nutcli.utils import LogExecutionPrinter, get_as_list
 
 
 def test_get_as_list__list():

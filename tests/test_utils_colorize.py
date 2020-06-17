@@ -1,7 +1,7 @@
-import mock
 import re
 
 import colorama
+import mock
 
 from nutcli.utils import Colorize
 
