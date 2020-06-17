@@ -9,28 +9,46 @@ from nutcli.tasks import *
 
 
 def test_Task__disabled(caplog):
-    task = Task('Test', enabled=False)(lambda task: logging.info('HELLO'))
+    task = Task('Test', enabled=False)(lambda: logging.info('HELLO'))
     with caplog.at_level(logging.DEBUG):
         task.execute()
     assert not caplog.text
 
 
 def test_Task__taskarg(caplog):
+    task = Task('Test')(lambda: logging.info('HELLO'))
+    with caplog.at_level(logging.DEBUG):
+        task.execute()
+    assert 'HELLO' in caplog.text
+    caplog.clear()
+
     task = Task('Test')(lambda task: logging.info('HELLO'))
     with caplog.at_level(logging.DEBUG):
         task.execute()
     assert 'HELLO' in caplog.text
     caplog.clear()
 
-    task = Task('Test', taskarg=False)(lambda: logging.info('HELLO'))
-    with caplog.at_level(logging.DEBUG):
-        task.execute()
-    assert 'HELLO' in caplog.text
-    caplog.clear()
+    t1 = Task('Test')
+    def test_fn(task):
+        assert task == t1
+    t1(test_fn)
+    t1.execute()
+
+    t2 = Task('Test')
+    def test_fn2(task):
+        assert task == 'test'
+    t2(test_fn2, 'test')
+    t2.execute()
+
+    t3 = Task('Test')
+    def test_fn3(task):
+        assert task == 'kwtest'
+    t3(test_fn3, task='kwtest')
+    t3.execute()
 
 
 def test_Task__ignore_errors(caplog):
-    def fn(task):
+    def fn():
         raise Exception()
 
     task = Task('Test', ignore_errors=False)(fn)
@@ -42,7 +60,7 @@ def test_Task__ignore_errors(caplog):
 
 
 def test_Task__timeout(caplog):
-    def fn(task):
+    def fn():
         time.sleep(2)
 
     task = Task('Test', timeout=1)(fn)
@@ -57,7 +75,7 @@ def test_Task__timeout(caplog):
 
 
 def test_Task__override_ignore_errors(caplog):
-    def fn(task):
+    def fn():
         raise Exception()
 
     task = Task('Test', ignore_errors=True)(fn)
@@ -69,7 +87,7 @@ def test_Task__override_ignore_errors(caplog):
 
 
 def test_Task__override_timeout(caplog):
-    def fn(task):
+    def fn():
         time.sleep(2)
 
     task = Task('Test', timeout=None)(fn)
@@ -90,7 +108,7 @@ def test_Task_Cleanup():
 
 
 def test_Task__messages(caplog):
-    task = Task('Test')(lambda task: task.debug('HELLO'))
+    task = Task('Test',)(lambda task: task.debug('HELLO'))
     with caplog.at_level(logging.DEBUG):
         task.execute()
     assert 'DEBUG' in caplog.text

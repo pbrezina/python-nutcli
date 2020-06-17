@@ -2,6 +2,7 @@ import colorama
 import datetime
 import functools
 import sys
+import inspect
 
 import nutcli
 from nutcli.decorators import IgnoreErrors, Timeout
@@ -24,7 +25,6 @@ class Task(object):
         name=None,
         ignore_errors=False,
         always=False,
-        taskarg=True,
         enabled=True,
         timeout=None,
         logger=None
@@ -38,9 +38,6 @@ class Task(object):
         :param always: If True, it will be run inside a :class:`TaskList` even
             if some previous tasks raised an exception, defaults to False
         :type always: bool, optional
-        :param taskarg: If True, the first argument of task's handler will be
-            the task itself, defaults to True
-        :type taskarg: bool, optional
         :param enabled: If False, this task will not execute its handler,
             defaults to True
         :type enabled: bool, optional
@@ -53,7 +50,6 @@ class Task(object):
         self.name = name if name is not None else ''
         self.ignore_errors = ignore_errors
         self.always = always
-        self.taskarg = taskarg
         self.enabled = enabled
         self.timeout = timeout
 
@@ -141,6 +137,28 @@ class Task(object):
 
         return real
 
+    def __real_args(self):
+        if not self.handler:
+            raise ValueError('No task handler specified.')
+
+        spec = inspect.getargspec(self.handler)
+
+        # Check if 'task' parameter is already set in positional parameters
+        if 'task' in spec.args:
+            task_index = spec.args.index('task')
+            if len(self.args) > task_index:
+                return (self.args, self.kwargs)
+
+        # Check if 'task' parameter is already set in keyword parameters
+        if 'task' in self.kwargs:
+            return (self.args, self.kwargs)
+
+        # Not set it either, add it if requested
+        if 'task' in spec.args or spec.keywords is not None:
+            return (self.args, {**self.kwargs, 'task': self})
+
+        return (self.args, self.kwargs)
+
     def execute(self, parent=None, **kwargs):
         """
         Execute the task's handler.
@@ -156,12 +174,16 @@ class Task(object):
         if not self.enabled:
             return
 
-        real_args = [self] + self.args if self.taskarg else self.args
-        self.__real_handler(kwargs)(*real_args, **self.kwargs)
+        (real_args, real_kwargs) = self.__real_args()
+        self.__real_handler(kwargs)(*real_args, **real_kwargs)
 
     def __call__(self, function, *args, **kwargs):
         """
         Setup a function that will be executed by :func:`execute`.
+
+        If the handler have ``task`` among parameters and this parameter is not
+        set in neither positional nor keyword arguments it will be set to
+        the task itself so the handler can access formatted logger functions.
 
         :param function: Task's handler.
         :type function: callable
@@ -260,7 +282,7 @@ class TaskList(Task):
 
         tasklist = TaskList('task-list')([
             Task('Task 1')(lambda task: task.info('I am doing something bad')),
-            Task('Task 2', taskarg=False)(raise_task),
+            Task('Task 2')(raise_task),
             Task('Task 3')(lambda task: task.info('I was skipped')),
             Task.Cleanup('Task 4')(lambda task: task.info('Cleaning up'))
         ])
@@ -313,7 +335,7 @@ class TaskList(Task):
         :type duration: bool, optional
         """
         super().__init__(
-            name, ignore_errors, always, False, True, timeout, logger
+            name, ignore_errors, always, enabled, timeout, logger
         )
         super().__call__(self._run_tasks)
 
