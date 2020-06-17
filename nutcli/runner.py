@@ -9,6 +9,7 @@ import nutcli
 from nutcli.commands import Actor
 from nutcli.decorators import LogExecution, SideEffect
 from nutcli.exceptions import TimeoutError
+from nutcli.parser import NegateAction
 from nutcli.shell import Shell, ShellCommandError, ShellError, ShellTimeoutError
 from nutcli.utils import Colorize, check_instance
 
@@ -65,6 +66,7 @@ class Runner(object):
         """
 
         self.name = name
+        self.tag = name
         self.parser = parser
         self.logger = logger if logger is not None else nutcli.message
         self.timeout_exit_code = timeout_exit_code
@@ -79,9 +81,11 @@ class Runner(object):
               :class:`nutcli.decorators.LogExecution` will be printed to the
               logger.
             - ``--dry-run``: If set, calls decorated with
-              :class:`nutcli.decorators.SideEffect` will not be executed.
-            - ``--no-colors``: If set, colorized output created with
-              :class:`nutcli.utils.Colorize` will not contain any colors.
+              :class:`nutcli.decorators.SideEffect` will not be executed.,
+            - ``--colors``, ``--no-colors``: Enable or disable colorized output.
+              If not present, colors are enabled when stdout is a terminal.
+            - ``--log-tag``, ``--no-log-tag``: Enable or disable message
+              prefix when logging with default logger.
 
         .. note::
             You can override the option names by providing the options
@@ -92,7 +96,8 @@ class Runner(object):
                 options = {
                     'log-execution': 'log',
                     'dry-run': 'no-side-effects',
-                    'no-colors': 'no-tty'
+                    'colors': 'tty',
+                    'log-tag': 'tag'
                 }
 
         :param options: Override options names, defaults to None
@@ -104,23 +109,37 @@ class Runner(object):
         if options is None:
             options = {}
 
-        self.parser.add_argument(
-            '--' + options.get('log-execution', 'log-execution'),
-            action='store_true', dest='_nutcli_log_execution',
-            help='Log execution of operations that supports it.'
-        )
+        if 'log-execution' not in options or options['log-execution'] is not None:
+            self.parser.add_argument(
+                '--' + options.get('log-execution', 'log-execution'),
+                action='store_true', dest='_nutcli_log_execution',
+                help='Log execution of operations that supports it.'
+            )
 
-        self.parser.add_argument(
-            '--' + options.get('dry-run', 'dry-run'),
-            action='store_true', dest='_nutcli_dry_run',
-            help='Do not execute operations with side effects. Only log what would be done.'
-        )
+        if 'dry-run' not in options or options['dry-run'] is not None:
+            self.parser.add_argument(
+                '--' + options.get('dry-run', 'dry-run'),
+                action='store_true', dest='_nutcli_dry_run',
+                help='Do not execute operations with side effects. '
+                     'Only log what would be done.'
+            )
 
-        self.parser.add_argument(
-            '--' + options.get('no-colors', 'no-colors'),
-            action='store_false', dest='_nutcli_colors',
-            help='Do not execute operations with side effects. Only log what would be done.'
-        )
+        if 'colors' not in options or options['colors'] is not None:
+            self.parser.add_argument(
+                '--' + options.get('colors', 'colors'),
+                '--no-' + options.get('colors', 'colors'),
+                action=NegateAction, dest='_nutcli_colors',
+                help='Enable/disable colorized output.'
+            )
+
+        if 'log-tag' not in options or options['log-tag'] is not None:
+            self.parser.add_argument(
+                '--' + options.get('log-tag', 'log-tag'),
+                '--no-' + options.get('log-tag', 'log-tag'),
+                action=NegateAction, dest='_nutcli_log_tag',
+                help='Enable/disable message prefix.',
+                default=True
+            )
 
         return self
 
@@ -145,8 +164,15 @@ class Runner(object):
             del args._nutcli_dry_run
 
         if hasattr(args, '_nutcli_colors'):
+            if args._nutcli_colors is None:
+                args._nutcli_colors = sys.stdout.isatty()
             Colorize.enabled(args._nutcli_colors)
             del args._nutcli_colors
+
+        if hasattr(args, '_nutcli_log_tag'):
+            if not args._nutcli_log_tag:
+                self.tag = None
+            del args._nutcli_log_tag
 
         return args
 
@@ -174,14 +200,14 @@ class Runner(object):
         stdout = logging.StreamHandler(sys.stdout)
         stdout.setLevel(logging.DEBUG)
         stdout.addFilter(InfoFilter())
-        if self.name:
-            tag = Colorize.all(f'[{self.name}] ', colorama.Fore.BLUE, colorama.Style.BRIGHT)
+        if self.tag:
+            tag = Colorize.all(f'[{self.tag}] ', colorama.Fore.BLUE, colorama.Style.BRIGHT)
         stdout.setFormatter(logging.Formatter(f'{tag}%(message)s'))
 
         stderr = logging.StreamHandler()
         stderr.setLevel(logging.WARNING)
-        if self.name:
-            tag = Colorize.all(f'[{self.name}] ', colorama.Fore.RED, colorama.Style.BRIGHT)
+        if self.tag:
+            tag = Colorize.all(f'[{self.tag}] ', colorama.Fore.RED, colorama.Style.BRIGHT)
         stderr.setFormatter(logging.Formatter(f'{tag}%(message)s'))
 
         self.logger.addHandler(stdout)
