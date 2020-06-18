@@ -195,24 +195,26 @@ class Runner(object):
             def filter(self, rec):
                 return rec.levelno in (logging.DEBUG, logging.INFO)
 
-        tag = ''
+        tag = f'[{self.tag}] ' if self.tag else ''
 
         stdout = logging.StreamHandler(sys.stdout)
         stdout.setLevel(logging.DEBUG)
         stdout.addFilter(InfoFilter())
-        if self.tag:
-            tag = Colorize.all(f'[{self.tag}] ', colorama.Fore.BLUE, colorama.Style.BRIGHT)
-        stdout.setFormatter(logging.Formatter(f'{tag}%(message)s'))
+        stdout.setFormatter(logging.Formatter(
+            Colorize.all(tag, colorama.Fore.BLUE, colorama.Style.BRIGHT) + '%(message)s'
+        ))
 
         stderr = logging.StreamHandler()
         stderr.setLevel(logging.WARNING)
-        if self.tag:
-            tag = Colorize.all(f'[{self.tag}] ', colorama.Fore.RED, colorama.Style.BRIGHT)
-        stderr.setFormatter(logging.Formatter(f'{tag}%(message)s'))
+        stderr.setFormatter(logging.Formatter(
+            Colorize.all(tag, colorama.Fore.RED, colorama.Style.BRIGHT) + '%(message)s'
+        ))
 
         self.logger.addHandler(stdout)
         self.logger.addHandler(stderr)
         self.logger.setLevel(logging.DEBUG)
+
+        self.logger._log_prefix_len = len(tag)
 
         return self
 

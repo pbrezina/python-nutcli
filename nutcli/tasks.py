@@ -58,19 +58,27 @@ class Task(object):
         self.args = []
         self.kwargs = {}
 
-        self.__root_logger = logger if logger is not None else nutcli.message
-        self.__logger = None
-        self.__parent = None
+        self.__logger = logger if logger is not None else nutcli.message
+        self._parent = None
 
     def _set_parent(self, parent):
-        self.__logger = parent if parent is not None else self.__root_logger
-        self.__parent = parent
+        self._parent = parent
+
+    @property
+    def _log_prefix(self):
+        if self._parent is None:
+            return ''
+
+        return self._parent._log_prefix + '  '
+
+    @property
+    def _log_prefix_len(self):
+        return len(self._log_prefix) + getattr(
+            self.__logger, '_log_prefix_len', 0
+        )
 
     def _log_message(self, fn, msg, args, kwargs):
-        if self.__parent is not None:
-            msg = f'  {msg}'
-
-        fn(msg, *args, **kwargs)
+        fn(self._log_prefix + msg, *args, **kwargs)
 
     def debug(self, msg, *args, **kwargs):
         """
@@ -344,11 +352,14 @@ class TaskList(Task):
         self.duration = duration
         self.tasks = []
 
-    def _log_message(self, fn, msg, args, kwargs):
-        if self.tag is not None:
-            msg = f'[{self.tag}] {msg}'
+    @property
+    def _log_prefix(self):
+        tag = f'[{self.tag}] ' if self.tag is not None else ''
 
-        super()._log_message(fn, msg, args, kwargs)
+        if self._parent is None:
+            return tag
+
+        return self._parent._log_prefix + '  ' + tag
 
     def _run_tasks(self):
         error = None

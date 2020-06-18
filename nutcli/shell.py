@@ -1,8 +1,14 @@
 import copy
+import fcntl
 import os
+import struct
 import subprocess
+import termios
 import textwrap
+import threading
 from enum import Enum
+import sys
+import select
 
 import colorama
 
@@ -291,6 +297,226 @@ class ShellEnvironment(object):
         """
 
         return copy.deepcopy(self)
+
+
+class ShellOutputPipe(threading.Thread):
+    """
+    Provide a pipe that calls a callback on each line produced by the shell
+    command.
+
+    .. code-block:: python
+        :caption: Example usage: Just print what we get
+
+        sh = Shell()
+        with ShellOutputPipe(print) as pipe:
+            sh('echo "Hello World!"', stdout=pipe)
+
+    The pipe is automatically closed when the context is destroyed or when
+    the object is finalized (garbage collected). You can use ``close()`` method
+    to close it explicitly.
+
+    .. note:: If ``stdout`` is a terminal then new pseudo terminal is
+              created unless set otherwise with ``as_pty`` parameter.
+    """
+
+    def __init__(self, callback, as_pty=None, tty_size=None):
+        """
+        :param callback: Callback to call on each line of the output.
+        :type callback: function
+        :param as_pty: If True, pseudo terminal is created. If False, normal
+            pipe is created. If None, pseudo terminal is created if stdout
+            is a terminal.
+        :type as_pty: bool, optional
+        :param tty_size: Requested size of new pseudo terminal.
+            defaults to None (= do not change)
+        :type tty_size: list of int
+
+        .. note:: The format of ``tty_size`` is: [num_rows, num_cols]. If either
+                  is set to zero then the value is not changed.
+        """
+        super().__init__()
+        self.daemon = False
+
+        if (as_pty is None and sys.stdout.isatty()) or as_pty:
+            (read_fd, write_fd) = os.openpty()
+
+            if tty_size is not None:
+                fcntl.ioctl(
+                    write_fd,
+                    termios.TIOCSWINSZ,
+                    struct.pack('HHHH', tty_size[0], tty_size[1], 0, 0)
+                )
+        else:
+            (read_fd, write_fd) = os.pipe()
+
+        self.read_file = os.fdopen(read_fd, mode='rb')
+        self.write_file = os.fdopen(write_fd, mode='wb')
+
+        self.callback = callback
+        self.closed = False
+
+        self.start()
+
+    def run(self):
+        """
+        :meta private:
+        """
+        try:
+            while True:
+                line = self._read_line()
+                if not line:
+                    break
+
+                self.callback(line)
+        except Exception:
+            # Write fd was probably closed, we don't care.
+            pass
+        finally:
+            self.read_file.close()
+
+    def _read_line(self):
+        byteline = bytearray()
+        while True:
+            byte = self.read_file.read(1)
+            if not byte:
+                break
+
+            byteline.extend(byte)
+            if byte == b'\r' and self._has_data(self.read_file):
+                peek = self.read_file.peek(1)
+                if peek and peek[0] == b'\n':
+                    continue
+
+            if byte in b'\r\n':
+                break
+
+        return byteline.decode('utf-8')
+
+    def _has_data(self, f):
+        return select.select([f], [], [], 0.0)[0]
+
+    def close(self):
+        """
+        Close the pipe.
+        """
+
+        if not self.closed:
+            self.write_file.close()
+
+        self.closed = True
+        self.join()
+
+    def __enter__(self):
+        return self.write_file
+
+    def __exit__(self, *args, **kwargs):
+        self.close()
+
+    def __del__(self):
+        self.close()
+
+
+class ShellLoggerPipe(object):
+    """
+    Forward shell output to a logger.
+
+    .. code-block:: python
+        :caption: Example usage
+
+        logger = logging.getLogger(__name__)
+        sh = Shell()
+        with ShellLoggerPipe(logger) as (stdout, stderr)):
+            sh('echo "Hello World!"', stdout=stdout, stderr=stderr)
+
+    The pipe is automatically closed when the context is destroyed or when
+    the object is finalized (garbage collected). You can use ``close()`` method
+    to close it explicitly.
+
+    .. note:: Bz default, both ``stdout`` and ``stderr`` output is forwarded to
+              ``logger.info()`` method. If you want to distinguish between
+              these two and forward ``stderr`` output to ``logger.error()``
+              instead set ``split`` to ``True``.
+
+    .. note:: If ``stdout`` (or ``stderr`` respectively) is a terminal then
+              new pseudo terminal is created unless set otherwise with
+              ``as_pty`` parameter.
+    """
+
+    def __init__(self, logger, split=False, as_pty=None):
+        """
+        :param logger: The logger.
+        :type logger: logger
+        :param split: If True, ``stderr`` output is send to ``logger.error``
+            instead of ``logger.info``, defaults to False
+        :type split: bool, optional
+        :param as_pty: If True, pseudo terminal is created. If False, normal
+            pipe is created. If None, pseudo terminal is created if the target
+            stream (``stdout`` or ``stderr``) is a terminal.
+        :type as_pty: bool, optional
+        """
+
+        self.logger = logger
+        self.split = split
+
+        self.out_pty = sys.stdout.isatty() if as_pty is None else as_pty
+        self.err_pty = sys.stderr.isatty() if as_pty is None else as_pty
+
+        out_size = self._get_tty_size(sys.stdout)
+        err_size = self._get_tty_size(sys.stderr)
+
+        if self.split:
+            self.stdout = ShellOutputPipe(self._log_stdout, self.out_pty, out_size)
+            self.stderr = ShellOutputPipe(self._log_stderr, self.err_pty, err_size)
+        else:
+            self.stdout = ShellOutputPipe(self._log_stdout, self.out_pty, out_size)
+            self.stderr = self.stdout
+
+    def _get_tty_size(self, f):
+        if not f.isatty():
+            return None
+
+        prefix_len = getattr(self.logger, '_log_prefix_len', None)
+        if prefix_len is None:
+            return None
+
+        current = struct.unpack('HHHH', fcntl.ioctl(
+            f.fileno(), termios.TIOCGWINSZ,
+            struct.pack('HHHH', 0, 0, 0, 0)
+        ))
+
+        return [current[0], current[1] - prefix_len]
+
+    def _sanitize(self, line, is_pty):
+        if is_pty:
+            if line.endswith('\r'):
+                line += '\033[A'  # Move cursor up to overcome logged new line
+        else:
+            line = line.replace('\r', '')
+
+        return line.rstrip('\n')
+
+    def _log_stdout(self, line):
+        self.logger.info(self._sanitize(line, self.out_pty))
+
+    def _log_stderr(self, line):
+        self.logger.error(self._sanitize(line, self.err_pty))
+
+    def close(self):
+        """
+        Close the pipe.
+        """
+
+        self.stdout.close()
+        self.stderr.close()
+
+    def __enter__(self):
+        return (self.stdout.write_file, self.stderr.write_file)
+
+    def __exit__(self, *args, **kwargs):
+        self.close()
+
+    def __del__(self):
+        self.close()
 
 
 class ShellError(Exception):

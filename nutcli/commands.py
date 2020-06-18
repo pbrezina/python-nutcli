@@ -84,6 +84,13 @@ class Actor(object):
 
         return kwargs
 
+    @property
+    def _log_prefix_len(self):
+        if hasattr(self.logger, '_log_prefix_len'):
+            return self.logger._log_prefix_len
+
+        return 0
+
     def debug(self, msg, *args, **kwargs):
         """
         Log a debug message.

@@ -4,7 +4,8 @@ import os
 import mock
 import pytest
 
-from nutcli.shell import Shell, ShellCommandError, ShellEnvironment, ShellResult, ShellTimeoutError
+from nutcli.shell import (Shell, ShellCommandError, ShellEnvironment, ShellLoggerPipe, ShellOutputPipe, ShellResult,
+                          ShellTimeoutError)
 
 
 def test_ShellEnvironment_defaults__system():
@@ -282,4 +283,24 @@ def test_Shell__default_effect(_a, _b, caplog):
         result = shell('exit 0', dry_run_result=ShellResult(1))
     assert result.rc == 1
     assert 'exit 0' in caplog.text
+    caplog.clear()
+
+
+def test_Shell__ShellOutputPipe(caplog):
+    shell = Shell()
+
+    with caplog.at_level(logging.INFO):
+        with ShellOutputPipe(logging.info) as pipe:
+            shell('echo HELLO', stdout=pipe)
+    assert 'HELLO' in caplog.text
+    caplog.clear()
+
+
+def test_Shell__ShellLoggerPipe(caplog):
+    shell = Shell()
+
+    with caplog.at_level(logging.INFO):
+        with ShellLoggerPipe(logging) as (stdout, stderr):
+            shell('echo HELLO', stdout=stdout, stderr=stderr)
+    assert 'HELLO' in caplog.text
     caplog.clear()
