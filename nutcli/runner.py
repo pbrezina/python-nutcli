@@ -248,6 +248,9 @@ class Runner(object):
                 return self.timeout_exit_code
 
             return 1
+        except KeyboardInterrupt:
+            self.logger.error(f'Program interupted by user.')
+            return 1
         except Exception as e:
             cls = Colorize.all(e.__class__.__name__, colorama.Style.BRIGHT, colorama.Fore.RED)
             self.logger.error(f'Exception {cls}: {str(e)}')
