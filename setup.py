@@ -4,8 +4,8 @@ with open("README.md", "r") as fh:
     long_description = fh.read()
 
 setuptools.setup(
-    name="nutcli",  # Replace with your own username
-    version="1.0",
+    name="nutcli",
+    version="1.1",
     author="Pavel Březina",
     author_email="brezinapavel@gmail.com",
     description="Build robust command line interface fast.",
