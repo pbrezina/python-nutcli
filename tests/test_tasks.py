@@ -416,3 +416,13 @@ def test_TaskList__list_methods(caplog):
     popped = tasklist.pop(1)
     assert tasklist.tasks == [t1, t3]
     assert popped == t2
+
+
+def test_TaskList__timeout():
+    tasklist = TaskList('L1', timeout=1)([
+        Task('Task 1')(lambda: time.sleep(2))
+    ])
+
+    with pytest.raises(TimeoutError) as e:
+        tasklist.execute()
+    assert e.value.timeout == 1
