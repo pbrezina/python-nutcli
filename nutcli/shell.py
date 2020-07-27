@@ -62,7 +62,8 @@ class Shell(object):
         clear_env=False,
         shell=None,
         default_effect=Effect.SideEffect,
-        logger=None
+        logger=None,
+        **kwargs
     ):
         """
         :param cwd: Default working directory, defaults to None
@@ -81,12 +82,17 @@ class Shell(object):
         :type default_effect: Effect, optional
         :param logger: Logger, defaults to None (= :class:`nutcli.message`)
         :type logger: logger, optional
+
+        Additional keyword arguments can be specified to be forwarded to
+        ``subprocess.run()`` call as default values if not passed to
+        command execution.
         """
 
         self.cwd = cwd if cwd is not None else os.getcwd()
         self.shell = shell if shell is not None else ['/bin/bash', '-c']
         self.default_effect = default_effect
         self.logger = logger if logger is not None else nutcli.message
+        self.kwargs = kwargs
 
         self.env = ShellEnvironment(clear_env)
         self.env.set(env)
@@ -98,6 +104,8 @@ class Shell(object):
             'check': True,
             'cwd': self.cwd
         }
+
+        defaults.update(self.kwargs)
 
         return {**defaults, **kwargs}
 
