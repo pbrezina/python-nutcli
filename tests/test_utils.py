@@ -1,6 +1,8 @@
 import logging
 
-from nutcli.utils import LogExecutionPrinter, get_as_list
+import pytest
+
+from nutcli.utils import LogExecutionPrinter, get_as_list, dict_to_namespace
 
 
 def test_get_as_list__list():
@@ -39,6 +41,29 @@ def test_get_as_list__misc():
 
     result = get_as_list({'a': 'b'})
     assert result == [{'a': 'b'}]
+
+
+def test_dict_to_namespace():
+    result = dict_to_namespace({'a': 1, 'b': 2})
+    assert hasattr(result, 'a')
+    assert hasattr(result, 'b')
+    assert result.a == 1
+    assert result.b == 2
+
+    result = dict_to_namespace({'a': 1, 'b': {'c': 3}})
+    assert hasattr(result, 'a')
+    assert hasattr(result, 'b')
+    assert hasattr(result.b, 'c')
+    assert result.a == 1
+    assert result.b.c == 3
+
+
+def test_dict_to_namespace__error():
+    with pytest.raises(ValueError) as e:
+        dict_to_namespace(None)
+
+    with pytest.raises(ValueError) as e:
+        dict_to_namespace(1)
 
 
 def test_LogExecutionPrinter__skip_self_false(caplog):

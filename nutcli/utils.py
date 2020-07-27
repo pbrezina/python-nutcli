@@ -1,5 +1,6 @@
 import inspect
 import re
+import types
 
 import colorama
 
@@ -49,6 +50,32 @@ def get_as_list(arg):
         return []
     else:
         return [arg]
+
+
+def dict_to_namespace(d):
+    """
+    Recursively convert dictionary into a namespace.
+
+    :param d: The dictionary.
+    :type d: dict
+    :return: Namespace.
+    :rtype: types.SimpleNamespace
+    """
+
+    def _dict_to_namespace(d):
+        if d is None or type(d) != dict:
+            return d
+
+        ns = types.SimpleNamespace()
+        for key, value in d.items():
+            setattr(ns, key, _dict_to_namespace(value))
+
+        return ns
+
+    if d is None or type(d) != dict:
+        raise ValueError('Input is not a dictionary')
+
+    return _dict_to_namespace(d)
 
 
 class Colorize(object):
