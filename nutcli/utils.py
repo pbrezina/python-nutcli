@@ -118,8 +118,8 @@ class Colorize(object):
 
         :param fmt: String to format.
         :type fmt: str
-        :param \*args: Color specifications.
-        :type \*args: str
+        :param \\*args: Color specifications.
+        :type \\*args: str
         :return: Colorized string.
         :rtype: str
         """
@@ -173,9 +173,9 @@ class Colorize(object):
         :type fmt: str
         :param pattern: Plain or compiled regular expression.
         :type pattern: str or type(re.compile(r''))
-        :param \*args: Color specifications.
+        :param \\*args: Color specifications.
             i-th match is colored with i-th element
-        :type \*args: str or list of str
+        :type \\*args: str or list of str
         :return: Colorized string.
         :rtype: str
         """
@@ -284,7 +284,7 @@ class LogExecutionPrinter(object):
             return args
 
         if '.' in function.__qualname__:
-            spec = inspect.getargspec(function)
+            spec = inspect.getfullargspec(function)
             if spec.args and spec.args[0] == 'self':
                 return args[1:]
 

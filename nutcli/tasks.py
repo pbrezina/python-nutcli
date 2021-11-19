@@ -150,7 +150,7 @@ class Task(object):
         if not self.handler:
             raise ValueError('No task handler specified.')
 
-        spec = inspect.getargspec(self.handler)
+        spec = inspect.getfullargspec(self.handler)
 
         # Check if 'task' parameter is already set in positional parameters
         if 'task' in spec.args:
@@ -163,7 +163,7 @@ class Task(object):
             return (self.args, self.kwargs)
 
         # Not set it either, add it if requested
-        if 'task' in spec.args or spec.keywords is not None:
+        if 'task' in spec.args or spec.varkw is not None:
             return (self.args, {**self.kwargs, 'task': self})
 
         return (self.args, self.kwargs)

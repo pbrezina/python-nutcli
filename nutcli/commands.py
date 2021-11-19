@@ -67,8 +67,8 @@ class Actor(object):
         pass
 
     def _filter_parser_args(self, args):
-        spec = inspect.getargspec(self.__call__)
-        if spec.keywords is None:
+        spec = inspect.getfullargspec(self.__call__)
+        if spec.varkw is None:
             kwargs = {}
             for arg in args.__dict__:
                 if arg in spec.args:
@@ -227,9 +227,9 @@ class Command(object):
         :type help_message: str
         :param handler: Actor that is executed when the command is run.
         :type handler: Actor
-        :param \*\*add_parser_kwargs: Additional keyword arguments passed to
+        :param \\*\\*add_parser_kwargs: Additional keyword arguments passed to
             :class:`argparse.Parser.add_parser`
-        :type \*\*add_parser_kwargs: dict of str:any
+        :type \\*\\*add_parser_kwargs: dict of str:any
 
         .. note::
             The default formatter class passed to ``argparse.Parser.add_parser``
