@@ -149,12 +149,6 @@ def test_Shell__success_shell():
     assert result.stdout == '/bin/bash'
     assert result.stderr == ''
 
-    shell = Shell(shell=['/bin/zsh', '-c'])
-    result = shell('echo -n $0', capture_output=True)
-    assert result.rc == 0
-    assert result.stdout == '/bin/zsh'
-    assert result.stderr == ''
-
 
 def test_Shell__failure_nocheck():
     shell = Shell()
