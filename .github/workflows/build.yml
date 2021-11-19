@@ -1,0 +1,26 @@
+name: Build
+on: [push, pull_request]
+jobs:
+  wheel:
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v2
+    - name: Install dependencies
+      run: |
+        pip3 install virtualenv
+        virtualenv .venv
+        source .venv/bin/activate
+        pip3 install build
+    - run: source .venv/bin/activate && python -m build --sdist --wheel --outdir dist/ .
+  docs:
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v2
+    - name: Install dependencies
+      run: |
+        pip3 install virtualenv
+        virtualenv .venv
+        source .venv/bin/activate
+        pip3 install -r ./requirements.txt
+        pip3 install -r ./docs/requirements.txt
+    - run: source .venv/bin/activate && make -C docs html SPHINXOPTS="-W --keep-going"
