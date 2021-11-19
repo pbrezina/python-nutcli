@@ -59,10 +59,10 @@ def test_dict_to_namespace():
 
 
 def test_dict_to_namespace__error():
-    with pytest.raises(ValueError) as e:
+    with pytest.raises(ValueError):
         dict_to_namespace(None)
 
-    with pytest.raises(ValueError) as e:
+    with pytest.raises(ValueError):
         dict_to_namespace(1)
 
 

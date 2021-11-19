@@ -251,7 +251,7 @@ class Runner(object):
 
             return 1
         except KeyboardInterrupt:
-            self.logger.error(f'Program interupted by user.')
+            self.logger.error('Program interupted by user.')
             return 1
         except Exception as e:
             cls = Colorize.all(e.__class__.__name__, colorama.Style.BRIGHT, colorama.Fore.RED)
