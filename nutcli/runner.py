@@ -269,7 +269,7 @@ class Runner(object):
         # Handler is ArgumentParser, print help.
         if isinstance(actor, argparse.ArgumentParser):
             actor.print_help()
-            return
+            return 1
 
         del args.func
 

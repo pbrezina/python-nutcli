@@ -130,15 +130,12 @@ def test_SubcommandsActor():
     tactor = TestActor()
     tactor.setup_parser(parser)
 
-    parser.print_help()
-    return
-
     (args, invalid) = parser.parse_known_args(['test1'])
     assert args.func == actor1
     assert not invalid
 
     with pytest.raises(SystemExit):
-        (args, invalid) = parser.parse_known_args(['test2'])
+        (_, _) = parser.parse_known_args(['test2'])
 
 
 def test_CommandParser__basic():
@@ -154,7 +151,7 @@ def test_CommandParser__basic():
     assert not invalid
 
     with pytest.raises(SystemExit):
-        (args, invalid) = parser.parse_known_args(['test2'])
+        (_, _) = parser.parse_known_args(['test2'])
 
 
 def test_CommandParser__list():
@@ -176,7 +173,7 @@ def test_CommandParser__list():
     assert not invalid
 
     with pytest.raises(SystemExit):
-        (args, invalid) = parser.parse_known_args(['test3'])
+        (_, _) = parser.parse_known_args(['test3'])
 
 
 def test_CommandParser__nested():
@@ -196,7 +193,7 @@ def test_CommandParser__nested():
     assert not invalid
 
     with pytest.raises(SystemExit):
-        (args, invalid) = parser.parse_known_args(['test2'])
+        (_, _) = parser.parse_known_args(['test2'])
 
     (args, invalid) = parser.parse_known_args(['nested', 'test2'])
     assert args.func == actor2
@@ -218,7 +215,7 @@ def test_CommandGroup__basic():
     assert not invalid
 
     with pytest.raises(SystemExit):
-        (args, invalid) = parser.parse_known_args(['test2'])
+        (_, _) = parser.parse_known_args(['test2'])
 
 
 def test_CommandGroup__list():
@@ -242,7 +239,7 @@ def test_CommandGroup__list():
     assert not invalid
 
     with pytest.raises(SystemExit):
-        (args, invalid) = parser.parse_known_args(['test3'])
+        (_, _) = parser.parse_known_args(['test3'])
 
 
 def test_CommandGroup__multiple():
@@ -274,4 +271,4 @@ def test_CommandGroup__multiple():
     assert not invalid
 
     with pytest.raises(SystemExit):
-        (args, invalid) = parser.parse_known_args(['test4'])
+        (_, _) = parser.parse_known_args(['test4'])
