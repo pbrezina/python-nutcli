@@ -5,7 +5,7 @@ with open("README.md", "r") as fh:
 
 setuptools.setup(
     name="nutcli",
-    version="1.1",
+    version="1.2",
     author="Pavel Březina",
     author_email="brezinapavel@gmail.com",
     description="Build robust command line interface fast.",
